@@ -1,5 +1,5 @@
 (defpackage aprblog
-  (:use :cl :gtk4)
+  (:use :cl :gtk4 :split-sequence)
   (:export #:main))
 (in-package :aprblog)
 
@@ -680,6 +680,45 @@
                   (text-view-left-margin editor) 10
                   (text-view-wrap-mode editor) +wrap-mode-word+
                   (sourceview:view-highlight-current-line-p editor) t)
+	    (connect editor "paste-clipboard"
+		     (lambda (self) (declare (ignore self))
+		       (let* ((clipboard (widget-clipboard editor))
+			      (mimes (gdk:content-formats-mime-types
+				      (gdk:clipboard-formats clipboard))))
+			 (alexandria:when-let ((type (find "image/" mimes :test 'uiop:string-prefix-p)))
+			   (let ((dialog (make-file-dialog)))
+			     (setf (file-dialog-title dialog) "Import resource to"
+				   (file-dialog-initial-folder dialog)
+				   (gio:file-new-for-path
+				    (namestring (or (probe-file (merge-pathnames "resources/" *blog-root*))
+						    (probe-file *blog-root*)))))
+			     (file-dialog-save
+			      dialog window (gio:make-cancellable)
+			      (cffi:get-callback
+			       (cffi:defcallback paste-clipboard-callback
+				   :void ((obj :pointer) (res :pointer) (data :pointer))
+				 (declare (ignore obj data))
+				 (alexandria:when-let
+				     ((path (ignore-errors
+					     (gio:file-path (file-dialog-save-finish dialog res)))))
+				   (gdk:clipboard-read-texture-async
+				    clipboard (gio:make-cancellable)
+				    (cffi:get-callback
+				     (cffi:defcallback read-clipboard-callback
+					 :void ((obj :pointer) (res :pointer) (data :pointer))
+				       (declare (ignore obj data))
+				       (gdk:texture-save-to-png
+					(gdk:clipboard-read-texture-finish clipboard res)
+					path)
+				       (when (search (append (pathname-directory *blog-root*) '("resources"))
+						     (pathname-directory path)
+						     :test 'equal)
+					(text-buffer-insert-at-cursor
+					 editor-buffer
+					 (format nil "![image](/~A)"
+						 (enough-namestring path (merge-pathnames "resources/" *blog-root*)))))))
+				    (cffi:null-pointer)))))
+			      (cffi:null-pointer)))))))
             (setf (window-child editor-window) editor))
            (editor-css-provider
             (make-css-provider)
@@ -701,6 +740,46 @@
            (file-saved-toast
             (adw:make-toast :title "Changes saved.")
             (setf (adw:toast-timeout file-saved-toast) 2))
+	   (modeline-resource
+	    (make-button :label "Resource")
+	    (setf (widget-css-classes modeline-resource) '("raised")
+                  (button-child modeline-resource)
+                  (let ((content (adw:make-button-content)))
+                    (setf (adw:button-content-label content) "Resource"
+                          (adw:button-content-icon-name content) "insert-link-symbolic")
+                    content))
+	    (connect modeline-resource "clicked"
+		     (lambda (button) (declare (ignore button))
+		       (let ((dialog (make-file-dialog)))
+			 (setf (file-dialog-title dialog) "Select a file"
+			       (file-dialog-initial-folder dialog)
+			       (gio:file-new-for-path
+				(namestring (or (probe-file (merge-pathnames "resources/" *blog-root*))
+						(probe-file *blog-root*)))))
+			 (file-dialog-open
+			  dialog window (gio:make-cancellable)
+			  (cffi:get-callback
+			   (cffi:defcallback paste-clipboard-callback
+			       :void ((obj :pointer) (res :pointer) (data :pointer))
+			     (declare (ignore obj data))
+			     (alexandria:when-let
+				 ((path (ignore-errors
+					 (gio:file-path (file-dialog-open-finish dialog res)))))
+			       (if (search (append (pathname-directory *blog-root*) '("resources"))
+					   (pathname-directory path)
+					   :test 'equal)
+				 (text-buffer-insert-at-cursor
+				  editor-buffer
+				  (format nil "![image](/~A)"
+					  (enough-namestring path (merge-pathnames "resources/" *blog-root*))))
+				 (let ((dialog (adw:make-message-dialog
+						:parent window
+						:heading "Selected file isn't under resource directory"
+						:body "It is an invalid resource and will not be published, please copy it to the resource folder first")))
+				   (adw:message-dialog-add-response dialog "OK" "OK")
+				   (window-present dialog))))))
+			  (cffi:null-pointer)))))
+	    (box-append modeline modeline-resource))
            (modeline-save
             (make-button :label "Save")
             (setf (widget-css-classes modeline-save) '("suggested-action")
@@ -1019,12 +1098,13 @@
 			    (gio:file-new-for-path
 			     (namestring (merge-pathnames #P"posts/" *blog-root*))))
 		      (file-dialog-save
-		       dialog window nil
-		       (lambda (obj res data) (declare (ignore obj data))
-			 (setf editor-file
-			       (file-dialog-save-finish dialog res))
-			 (when editor-file
-			   (save-and-exec)))
+		       dialog window (gio:make-cancellable)
+		       (cffi:get-callback
+			(cffi:defcallback save-file-callback
+			    :void ((obj :pointer) (res :pointer) (data :pointer))
+			  (declare (ignore obj data))
+			  (setf editor-file (ignore-errors (file-dialog-save-finish dialog res)))
+			  (when editor-file (save-and-exec))))
 		       (cffi:null-pointer)))))))
 
            (check-modified-then
