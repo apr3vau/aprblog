@@ -983,7 +983,7 @@
                                            unless (probe-file (merge-pathnames (format nil "templates/~A" f)
                                                                                *blog-root*))
                                              do (dex:fetch
-                                                 (format nil "https://apr3vau.github.io/resources/templates/~A" f)
+                                                 (format nil "https://raw.githubusercontent.com/apr3vau/aprblog/refs/heads/master/templates/~A" f)
                                                  (merge-pathnames (format nil "templates/~A" f) *blog-root*)))
                                      (unless (probe-file (merge-pathnames "config.sexp" *blog-root*))
                                        (with-open-file (out (merge-pathnames "config.sexp" *blog-root*)
