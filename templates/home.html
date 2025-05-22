@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% for post in posts %}
+{% include "postblock.html" :title post.title :content post.content :date post.date :update post.update :tags post.tags :filename post.filename %}
+{% endfor %}
+{% endblock content %}

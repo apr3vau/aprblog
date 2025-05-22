@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="postblock-outer">
+    <div class="postblock">
+        <div class="post-title-line">
+            <h2 id="{{ title }}" class="post-title">
+              <a href="/{{ filename }}.html" style="color: {{ fg }};">{{ title }}</a>
+            </h2>
+        </div>
+        <div class="post-content">
+            {{ content | safe }}
+        </div>
+        <a href="#{{ title }}" style="color: {{ fg-second }};">Back to Top</a>
+    </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,20 @@
+<div class="postblock-outer">
+    <div class="postblock">
+        <div class="post-title-line">
+            <h2 id="{{ title }}" class="post-title">
+              <a href="/{{ filename }}.html" style="color: {{ fg }};">{{ title }}</a>
+            </h2>
+            <div style="padding-top: 1em;">
+                {% for tag in tags %}
+                <a class="post-tag" href="/tag/{{tag}}">{{tag}}</a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="post-content">
+            {{ content | safe }}
+        </div>
+        <p style="color: {{ fg-second }};">Wrote at {{ date }};</p>
+        <p style="color: {{ fg-second }};">Last Update: {{ update }};</p>
+        <a href="#{{ title }}" style="color: {{ fg-second }};">Back to Top</a>
+    </div>
+</div>

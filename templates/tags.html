@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% for tag in tags %}
+<div class="postblock-outer">
+  <div class="postblock" style="padding-top: 0px; padding-bottom: 0px;">
+    <h3 style="font-family: 'Times New Roman', Times, serif; font-style: Italic; font-weight: bold;">
+      {{ tag.name }}
+    </h3>
+    {% for post in tag.posts %}
+    <p>
+      <a style="font-family: 'Times New Roman', Times, serif;
+                font-size: large;
+                margin-top: 1em;
+                color: {{ fg }};"
+         href="/{{ post.filename }}.html">
+        {{ post.title }}
+      </a>
+    </p>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% endblock content %}
